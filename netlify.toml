@@ -4,3 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "22"
+
+# The site was first created as a static site, so Netlify does not auto-detect
+# Next.js; without the runtime it publishes .next as plain files and every route 404s.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

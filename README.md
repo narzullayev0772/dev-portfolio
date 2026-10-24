@@ -1,28 +1,18 @@
-# Engineering notes
+# Alisher Narzullayev — portfolio
 
-Case studies from real production work — what I built, why, and what I learned.
+Mobile & Fullstack Engineer. Live: https://peaceful-gingersnap-b58c00.netlify.app
 
-## Writing an entry
-Add `entries/YYYY-MM-DD-slug.md`:
+Based on the open-source [dillionverma/portfolio](https://github.com/dillionverma/portfolio) template (Next.js, shadcn/ui, Magic UI) — MIT, see [LICENSE](./LICENSE).
 
-```markdown
----
-title: Cut list rebuilds by 60% with selector-based BLoC
-date: 2026-10-24
-tags: flutter, bloc, performance
-summary: One-line result shown on the index card.
----
+## Editing
+- Profile, work, projects and their **features → technologies**: [`src/data/resume.tsx`](./src/data/resume.tsx)
+- App icons and store screenshots: `public/apps/<slug>.png`, `public/apps/<slug>/{1,2,3}.jpg`
+- Engineering notes (blog): `content/<slug>.mdx` with `title`, `publishedAt`, `summary` frontmatter
 
-## Context
-...
-```
-
-`draft: true` in frontmatter hides an entry.
-
-## Build
+## Run
 ```bash
-npm install
-npm run build   # -> dist/
+pnpm install
+pnpm dev
 ```
 
-Deployed on Netlify (`netlify.toml`), every push to `main` redeploys.
+Deployed on Netlify (`netlify.toml`); every push to `main` redeploys.

@@ -164,6 +164,7 @@ export const DATA = {
         { name: "Voice messages", description: "Ogg/Opus playback through an FFI audio engine with crash-free teardown.", tech: ["flutter_soloud", "FFI"] },
         { name: "Tablet layout and edge-to-edge", description: "A navigation rail above the root navigator, and a reusable Android edge-to-edge inset toolkit.", tech: ["go_router", "Adaptive layout"] },
         { name: "Performance and memory", description: "Found a platform-view MethodChannel leak keeping screens alive via heap snapshots; skeleton loaders app-wide.", tech: ["DevTools", "VM service"] },
+        { name: "Session replay behind a kill switch", description: "Microsoft Clarity session replay and heatmaps, fully gated by Remote Config: both the on/off flag and the project ID come from config, so when disabled the SDK widget never mounts. Screen names and user IDs flow from the router, after the SDK is ready.", tech: ["Microsoft Clarity", "Firebase Remote Config", "go_router"] },
         { name: "Release automation", description: "Scripts that ship to TestFlight, Play and a team channel; an AI-assisted task → spec → tests pipeline.", tech: ["App Store Connect API", "Play API", "Bash"] },
       ],
     },

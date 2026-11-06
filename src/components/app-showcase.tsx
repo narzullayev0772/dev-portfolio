@@ -81,7 +81,7 @@ export function AppShowcase({
           </BlurFade>
           <BlurFade inView delay={0.1} className="flex flex-col gap-4">
             <TitleBlock title={title} dates={dates} icon={icon} large />
-            <RoleStats role={role} stats={stats} />
+            <RoleStats role={role} />
           </BlurFade>
           <BlurFade inView delay={0.15}>
             <div className="prose max-w-full text-pretty font-sans leading-relaxed text-muted-foreground dark:prose-invert">
@@ -108,22 +108,24 @@ export function AppShowcase({
                 </Badge>
               ))}
             </div>
-            <div className="flex flex-wrap items-center gap-4">
-              <Link
-                href={detailHref}
-                className="group/more inline-flex items-center gap-2 rounded-lg bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90"
-              >
-                {features.length > 3 ? `All ${features.length} features` : "Details"}
-                <ArrowRight className="size-4 transition-transform group-hover/more:translate-x-1" />
-              </Link>
-              {links.length > 0 && <LinkBadges links={links} />}
-            </div>
+            <Link
+              href={detailHref}
+              className="group/more inline-flex h-12 w-full sm:w-fit items-center justify-center gap-2 rounded-xl bg-foreground px-7 text-base font-semibold text-background transition-opacity hover:opacity-90"
+            >
+              {features.length > 3 ? `See all ${features.length} features` : "See details"}
+              <ArrowRight className="size-5 transition-transform group-hover/more:translate-x-1" />
+            </Link>
           </BlurFade>
         </div>
-        <div className={cn(reversed && "md:order-1")}>
-          <Link href={detailHref} aria-label={`${title} details`}>
+        <div className={cn("flex flex-col items-center gap-5", reversed && "md:order-1")}>
+          <Link href={detailHref} aria-label={`${title} details`} className="w-full">
             <Phones shots={screenshots} title={title} />
           </Link>
+          {/* Proof under the screens: store numbers and where to get the app. */}
+          <BlurFade inView delay={0.45} className="flex flex-col items-center gap-3">
+            {stats && <p className="text-sm font-medium text-muted-foreground">{stats}</p>}
+            {links.length > 0 && <LinkBadges links={links} className="justify-center" />}
+          </BlurFade>
         </div>
       </div>
     </article>

@@ -1,0 +1,50 @@
+---
+title: Tracing Flutter jank to the exact widget in my own code
+publishedAt: "2026-11-06"
+summary: A small CLI reads the VM timeline in profile mode and prints every slow frame as a path of the app's own widgets, the phase that blew the budget and the likely raster culprits.
+---
+
+**Project:** Uyqur (construction ERP, Flutter mobile)
+
+## Context
+
+The app ran smoothly on most phones but froze on some low-end devices. DevTools' Performance tab showed *that* a frame took 57 ms, but finding *which of our widgets* caused it meant scrolling through thousands of framework spans (`Padding`, `Semantics`, `RenderFlex`…) by hand. I wanted a tool that runs next to `flutter run` and simply says: frame #461, 84 ms against a 16.7 ms budget, mostly paint, caused by `SearchBar › FilterField` at `filter_field.dart:8`.
+
+## What I did
+
+- **Wrapped `flutter run --profile`.** A Dart CLI starts the app (or attaches to a running one with `--uri`), reads the VM service URI from stdout and turns on the framework's own timeline instrumentation through service extensions: `profileWidgetBuilds`, `profileRenderObjectLayouts` and `profileRenderObjectPaints`. It works in profile mode, so the numbers are AOT-real rather than debug JIT numbers.
+- **Rebuilt the span tree.** Every second it pulls the VM timeline, turns `B`/`E` and `X` events per thread into nested spans, and pairs `Animator::BeginFrame` (UI thread) with `Rasterizer::DoDraw` (raster thread) by their `frame_number` argument. I skipped the outer `GPURasterizer::Draw` span because it has no frame number. Frames that sit on a polling boundary carry over to the next batch.
+- **Defined "my code".** On start it indexes every class declared in the app and its local path packages, read from `package_config.json` with pub-cache and SDK entries filtered out. Each span's *self time* goes to its nearest ancestor from that set, so framework widgets count toward the user widget that created them. They still show up as an "inside:" hint (for example `InkResponse 5.3ms`).
+- **Recovered ancestors.** A rebuild starts at the dirty element, so the in-frame path is often short. The tool learns child → parent links from earlier frames, where screens were fully inflated, and extends the path upward.
+- **Raster attribution without an element tree.** My first plan was to dump the element tree on raster jank. It turned out `debugDumpApp` in profile mode only returns a placeholder line. So the tool keeps a ledger instead: every time a raster-heavy widget (`BackdropFilter`, `ImageFiltered`, `ShaderMask`, `ClipPath`, partial `Opacity`, platform views…) is *built*, it records the user path it was built under. Every time the matching `RenderObject` is *painted*, it records the time. On raster jank it lists the heavy widgets painted in the last 3 s, ranked by cost.
+- **Session summary.** On exit it ranks the widgets that were the top culprit most often, with their average frame time.
+
+Alternatives I rejected: an in-app overlay (it would add `vm_service` to the app and can't read its own timeline cheaply), and `profileUserWidgetBuilds` (it relies on widget-creation tracking, which only exists in debug builds).
+
+## Key code
+
+```dart
+// Attribute each span's self time to the nearest widget declared in the project.
+for (final s in walk(frame)) {
+  final owner = isProjectWidget(s) ? s : nearestProjectAncestor(s);
+  if (owner != null) selfTime[owner] = (selfTime[owner] ?? 0) + s.self;
+}
+// Same path across many list items is merged: "Feed › PostCard ×10".
+```
+
+```
+⚠ UI JANK  #461  84.1ms / 16.7ms budget
+  phase: build 29.7 · layout 30.6 · paint 42.0
+  ①  7.4ms  SearchBar › FilterField   lib/…/filter_field.dart:8
+       inside: InkResponse 5.3ms
+```
+
+## Result
+
+One command next to the usual run replaces manual digging in DevTools. Every slow frame comes with a clickable `file:line` of our own widget, the phase that broke the budget, and for GPU-bound frames, a short list of blur and saveLayer suspects with their owner paths.
+
+## What I learned
+
+- The framework already emits per-widget timeline spans. The work is in filtering them and assigning time to the right owner, not in instrumenting the app.
+- Profile mode strips more than you'd expect: `debugDumpApp` stays registered but returns a placeholder, and creator locations are debug-only. A design that relies on runtime introspection has to fall back to the timeline.
+- UI and raster frames correlate cleanly through the engine's `frame_number` argument. Wrapper spans that don't carry it have to be dropped, or every raster frame is counted twice.

@@ -234,7 +234,10 @@
   }
 
 }
-/* Hides any link pointing to netlify.com that contains a badge image */
-a[href*="netlify.com"] {
+/* Hides any link pointing to netlify.com that contains a badge image,
+   and the injected Netlify badge iframe until the script removes it */
+a[href*="netlify.com"],
+#nl-badge-frame,
+#nl-hud-frame {
   display: none !important;
 }

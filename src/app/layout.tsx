@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { FlickeringGrid } from "@/components/magicui/flickering-grid";
+import Script from "next/script";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -56,6 +57,15 @@ export const metadata: Metadata = {
   },
 };
 
+// Netlify injects its "Powered by Netlify" badge as an iframe appended to <body>
+// after load; watch for it and remove it the moment it appears.
+const removeNetlifyBadge = `(() => {
+  const sel = "#nl-badge-frame, #nl-hud-frame";
+  const sweep = () => document.querySelectorAll(sel).forEach((el) => el.remove());
+  sweep();
+  new MutationObserver(sweep).observe(document.documentElement, { childList: true, subtree: true });
+})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -89,6 +99,7 @@ export default function RootLayout({
             <Navbar />
           </TooltipProvider>
         </ThemeProvider>
+      <Script id="remove-netlify-badge" strategy="afterInteractive">{removeNetlifyBadge}</Script>
       </body>
     </html>
   );

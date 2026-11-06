@@ -1,5 +1,5 @@
 import { Icons } from "@/components/icons";
-import { Apple, HomeIcon, NotebookIcon, Play } from "lucide-react";
+import { Apple, HomeIcon, NotebookIcon, Package, Play } from "lucide-react";
 import { ReactLight } from "@/components/ui/svgs/reactLight";
 import { NextjsIconDark } from "@/components/ui/svgs/nextjsIconDark";
 import { Typescript } from "@/components/ui/svgs/typescript";
@@ -10,6 +10,7 @@ import { Docker } from "@/components/ui/svgs/docker";
 const appStore = (href: string) => ({ type: "App Store", href, icon: <Apple className="size-3" /> });
 const googlePlay = (href: string) => ({ type: "Google Play", href, icon: <Play className="size-3" /> });
 const source = (href: string) => ({ type: "Source", href, icon: <Icons.github className="size-3" /> });
+const pubDev = (name: string) => ({ type: "pub.dev", href: `https://pub.dev/packages/${name}`, icon: <Package className="size-3" /> });
 const shots = (slug: string) => [1, 2, 3].map((n) => `/apps/${slug}/${n}.jpg`);
 
 export const DATA = {
@@ -354,11 +355,12 @@ export const DATA = {
       active: true,
       role: "Author · Open source",
       stats: "",
-      icon: "",
+      icon: "/apps/pub-dev-icon.png",
+      cover: "/apps/pub-dev.png",
       screenshots: [] as string[],
       description: "Ship Flutter apps to Google Play and App Store Connect from one `deploy.yaml`. No Python, no fastlane.",
       technologies: ["Dart", "GitHub Actions"],
-      links: [source("https://github.com/narzullayev0772/deploykit")],
+      links: [pubDev("deploykit"), source("https://github.com/narzullayev0772/deploykit")],
       features: [
         { name: "Config, logic and secrets kept apart", description: "Versioned logic, committed YAML, secrets in env — deploy logic never gets gitignored with the keys.", tech: ["YAML", ".env"] },
         { name: "doctor", description: "Catches broken keys or a wrong branch before a ten-minute build fails.", tech: ["App Store Connect API", "Play API"] },
@@ -371,11 +373,12 @@ export const DATA = {
       active: true,
       role: "Author · Open source",
       stats: "",
-      icon: "",
+      icon: "/apps/pub-dev-icon.png",
+      cover: "/apps/pub-dev.png",
       screenshots: [] as string[],
       description: "Generates Clean Architecture features for Flutter from JSON/YAML or straight from the IDE. Used daily in production.",
       technologies: ["Dart", "Kotlin", "IntelliJ Platform"],
-      links: [source("https://github.com/narzullayev0772/clean_gen_cli")],
+      links: [pubDev("clean_gen_cli"), source("https://github.com/narzullayev0772/clean_gen_cli")],
       features: [
         { name: "Whole-feature scaffolding", description: "Data, domain, presentation, Retrofit services, use cases, cubits and DI.", tech: ["Code generation"] },
         { name: "Models from JSON", description: "Typed null-safe models with nested classes from example payloads.", tech: ["json_serializable"] },
@@ -419,8 +422,8 @@ export const DATA = {
       dates: "2025",
       location: "Open source",
       description: "Standard loading, success, error and pagination states for Bloc/Cubit.",
-      image: "",
-      links: [source("https://github.com/narzullayev0772/cubit_base")],
+      image: "/apps/pub-dev-icon.png",
+      links: [pubDev("cubit_base"), source("https://github.com/narzullayev0772/cubit_base")],
     },
     {
       title: "SportUp",

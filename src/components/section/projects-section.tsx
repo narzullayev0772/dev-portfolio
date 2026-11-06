@@ -46,6 +46,7 @@ export default function ProjectsSection() {
                                 tags={project.technologies}
                                 icon={project.icon}
                                 screenshots={project.screenshots}
+                                cover={"cover" in project ? project.cover : undefined}
                                 role={project.role}
                                 stats={project.stats}
                                 features={project.features}

@@ -25,6 +25,7 @@ interface Props {
   tags: readonly string[];
   icon?: string;
   screenshots?: readonly string[];
+  cover?: string;
   role?: string;
   stats?: string;
   features?: readonly Feature[];
@@ -81,7 +82,10 @@ export function RoleStats({ role, stats }: { role?: string; stats?: string }) {
 
 // Three store screenshots as phone screens; they fan out a little on hover.
 // Projects without screenshots get the same-height tile so every card lines up.
-function Media({ shots, icon, title }: { shots?: readonly string[]; icon?: string; title: string }) {
+function Media({ shots, icon, cover, title }: { shots?: readonly string[]; icon?: string; cover?: string; title: string }) {
+  if (cover) {
+    return <img src={cover} alt={`${title} cover`} className="h-56 w-full object-cover bg-white" />;
+  }
   if (!shots || shots.length === 0) {
     return (
       <div className="h-56 bg-muted flex items-center justify-center">
@@ -121,6 +125,7 @@ export function ProjectCard({
   tags,
   icon,
   screenshots,
+  cover,
   role,
   stats,
   features,
@@ -139,7 +144,7 @@ export function ProjectCard({
     >
       <div className="relative shrink-0">
         <Link href={detailHref} aria-label={`${title} details`} className="block">
-          <Media shots={screenshots} icon={hasShots ? undefined : icon} title={title} />
+          <Media shots={screenshots} icon={hasShots ? undefined : icon} cover={cover} title={title} />
         </Link>
         {links && links.length > 0 && <LinkBadges links={links} className="absolute top-2 right-2 z-20" />}
       </div>

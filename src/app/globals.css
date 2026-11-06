@@ -234,3 +234,7 @@
   }
 
 }
+/* Hides any link pointing to netlify.com that contains a badge image */
+a[href*="netlify.com"] {
+  display: none !important;
+}

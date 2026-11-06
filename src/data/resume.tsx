@@ -16,7 +16,7 @@ const shots = (slug: string) => [1, 2, 3].map((n) => `/apps/${slug}/${n}.jpg`);
 export const DATA = {
   name: "Alisher Narzullayev",
   initials: "AN",
-  url: "https://peaceful-gingersnap-b58c00.netlify.app",
+  url: "https://teachus.uz",
   location: "Tashkent, Uzbekistan",
   locationLink: "https://www.google.com/maps/place/tashkent",
   description:

@@ -1,6 +1,6 @@
 # Alisher Narzullayev — portfolio
 
-Mobile & Fullstack Engineer. Live: https://peaceful-gingersnap-b58c00.netlify.app
+Mobile & Fullstack Engineer. Live: https://teachus.uz
 
 Based on the open-source [dillionverma/portfolio](https://github.com/dillionverma/portfolio) template (Next.js, shadcn/ui, Magic UI) — MIT, see [LICENSE](./LICENSE).
 

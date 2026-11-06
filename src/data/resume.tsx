@@ -92,7 +92,7 @@ export const DATA = {
       start: "2024",
       end: "Present",
       description:
-        "Built a Korean-language learning app and its Flutter Web admin from scratch; building 189, ImpulseHR and TeachUs on NestJS + Next.js + Flutter; open-source Flutter tooling (deploykit, Clean Gen, cubit_base).",
+        "Built GetTopik, a Korean-language learning app, and its Flutter Web admin from scratch; building 189, ImpulseHR and TeachUs on NestJS + Next.js + Flutter; open-source Flutter tooling (deploykit, Clean Gen, cubit_base).",
     },
     {
       company: "Flutter Developer",
@@ -308,18 +308,18 @@ export const DATA = {
       ],
     },
     {
-      title: "Korean-language learning app",
-      href: "",
+      title: "GetTopik",
+      href: "https://apps.apple.com/uz/app/gettopik/id6742132491",
       dates: "2024 - 2026",
       active: true,
       role: "Sole developer · Client",
-      stats: "",
-      icon: "",
-      screenshots: [] as string[],
+      stats: "5K+ downloads · 4.6★ App Store",
+      icon: "/apps/gettopik.png",
+      screenshots: shots("gettopik"),
       description:
         "Student app with vocabulary, mock tests, handwriting and speaking practice, plus a Flutter Web admin where teachers build the content. Built both from scratch.",
       technologies: ["Flutter", "Flutter Web", "BLoC", "GitLab CI"],
-      links: [],
+      links: [appStore("https://apps.apple.com/uz/app/gettopik/id6742132491"), googlePlay("https://play.google.com/store/apps/details?id=uz.techspire.gettopik.app")],
       features: [
         { name: "Hangul handwriting checker", description: "Renders reference and strokes off-screen and compares pixels in an isolate — on device, no ML model.", tech: ["CustomPainter", "Isolates"] },
         { name: "Speaking practice", description: "Live Korean speech recognition checked against the answer, with TTS playback.", tech: ["speech_to_text", "flutter_tts"] },

@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import { isStore, StoreBadge } from "@/components/store-badge";
 import { Badge } from "@/components/ui/badge";
 import { cn, projectSlug } from "@/lib/utils";
 import { ArrowUpRight } from "lucide-react";
@@ -35,15 +36,19 @@ interface Props {
 
 export function LinkBadges({ links, className }: { links: readonly ProjectLink[]; className?: string }) {
   return (
-    <div className={cn("flex flex-wrap gap-2", className)}>
-      {links.map((link, idx) => (
+    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+      {links.map((link, idx) =>
+        isStore(link.type) ? (
+          <StoreBadge key={idx} store={link.type} href={link.href} />
+        ) : (
         <Link href={link.href} key={idx} target="_blank" rel="noopener noreferrer">
           <Badge className="flex items-center gap-1.5 text-xs bg-black text-white hover:bg-black/90" variant="default">
             {link.icon}
             {link.type}
           </Badge>
         </Link>
-      ))}
+        )
+      )}
     </div>
   );
 }

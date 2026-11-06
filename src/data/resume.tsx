@@ -55,7 +55,7 @@ export const DATA = {
       },
       Telegram: {
         name: "Telegram",
-        url: "https://t.me/navi_ac",
+        url: "https://t.me/narzullayev_alisher",
         icon: Icons.telegram,
         navbar: true,
       },

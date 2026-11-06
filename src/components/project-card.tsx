@@ -1,11 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
-"use client";
-
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { ArrowUpRight, X } from "lucide-react";
+import { cn, projectSlug } from "@/lib/utils";
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import { useRef } from "react";
 import Markdown from "react-markdown";
 
 interface Feature {
@@ -35,7 +32,7 @@ interface Props {
   className?: string;
 }
 
-function LinkBadges({ links, className }: { links: readonly ProjectLink[]; className?: string }) {
+export function LinkBadges({ links, className }: { links: readonly ProjectLink[]; className?: string }) {
   return (
     <div className={cn("flex flex-wrap gap-2", className)}>
       {links.map((link, idx) => (
@@ -46,6 +43,38 @@ function LinkBadges({ links, className }: { links: readonly ProjectLink[]; class
           </Badge>
         </Link>
       ))}
+    </div>
+  );
+}
+
+export function TitleBlock({ title, dates, icon, large }: { title: string; dates: string; icon?: string; large?: boolean }) {
+  return (
+    <div className="flex items-center gap-3 min-w-0">
+      {icon && (
+        <img
+          src={icon}
+          alt={`${title} app icon`}
+          className={cn("rounded-[10px] border border-border shadow-sm flex-none", large ? "size-16 rounded-2xl" : "size-11")}
+        />
+      )}
+      <div className="flex flex-col gap-1 min-w-0">
+        {large ? (
+          <h1 className="text-3xl font-semibold tracking-tighter leading-none">{title}</h1>
+        ) : (
+          <h3 className="font-semibold leading-none">{title}</h3>
+        )}
+        <time className="text-xs text-muted-foreground">{dates}</time>
+      </div>
+    </div>
+  );
+}
+
+export function RoleStats({ role, stats }: { role?: string; stats?: string }) {
+  if (!role && !stats) return null;
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+      {role && <span className="font-medium text-foreground">{role}</span>}
+      {stats && <span className="text-muted-foreground">{stats}</span>}
     </div>
   );
 }
@@ -84,130 +113,6 @@ function Media({ shots, icon, title }: { shots?: readonly string[]; icon?: strin
   );
 }
 
-function TitleBlock({ title, dates, icon }: { title: string; dates: string; icon?: string }) {
-  return (
-    <div className="flex items-center gap-3 min-w-0">
-      {icon && (
-        <img src={icon} alt={`${title} app icon`} className="size-11 rounded-[10px] border border-border shadow-sm flex-none" />
-      )}
-      <div className="flex flex-col gap-1 min-w-0">
-        <h3 className="font-semibold leading-none">{title}</h3>
-        <time className="text-xs text-muted-foreground">{dates}</time>
-      </div>
-    </div>
-  );
-}
-
-function RoleStats({ role, stats }: { role?: string; stats?: string }) {
-  if (!role && !stats) return null;
-  return (
-    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
-      {role && <span className="font-medium text-foreground">{role}</span>}
-      {stats && <span className="text-muted-foreground">{stats}</span>}
-    </div>
-  );
-}
-
-// Full project details. A centered dialog on desktop, a bottom drawer on phones.
-function DetailsDialog({
-  dialogRef,
-  title,
-  dates,
-  icon,
-  role,
-  stats,
-  description,
-  screenshots,
-  features,
-  tags,
-  links,
-}: Omit<Props, "href" | "className"> & { dialogRef: React.RefObject<HTMLDialogElement | null> }) {
-  const close = () => dialogRef.current?.close();
-  return (
-    <dialog
-      ref={dialogRef}
-      onClick={(e) => e.target === e.currentTarget && close()}
-      className={cn(
-        "m-0 mt-auto w-full max-w-full max-h-[90dvh] rounded-t-2xl sm:m-auto sm:max-w-2xl sm:max-h-[85dvh] sm:rounded-2xl",
-        "border border-border bg-background text-foreground p-0 shadow-2xl overscroll-contain",
-        "backdrop:bg-black/60 backdrop:backdrop-blur-sm",
-        "transition-all duration-300 ease-out transition-discrete",
-        "starting:open:translate-y-8 starting:open:opacity-0 sm:starting:open:translate-y-0 sm:starting:open:scale-95"
-      )}
-    >
-      <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-border bg-background/95 backdrop-blur p-5">
-        <div className="flex flex-col gap-2 min-w-0">
-          <TitleBlock title={title} dates={dates} icon={icon} />
-          <RoleStats role={role} stats={stats} />
-        </div>
-        <button
-          type="button"
-          onClick={close}
-          aria-label="Close"
-          className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
-        >
-          <X className="size-4" />
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-6 p-5">
-        {links && links.length > 0 && <LinkBadges links={links} />}
-
-        {screenshots && screenshots.length > 0 && (
-          <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1 snap-x">
-            {screenshots.map((src, i) => (
-              <img
-                key={src}
-                src={src}
-                alt={`${title} screenshot ${i + 1}`}
-                className="h-80 w-auto flex-none snap-start rounded-xl border border-border object-cover"
-              />
-            ))}
-          </div>
-        )}
-
-        <div className="text-sm prose max-w-full text-pretty font-sans leading-relaxed text-muted-foreground dark:prose-invert">
-          <Markdown>{description}</Markdown>
-        </div>
-
-        {features && features.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <h4 className="text-sm font-semibold">What I built</h4>
-            <ul className="flex flex-col gap-4">
-              {features.map((f) => (
-                <li key={f.name} className="flex flex-col gap-1.5 border-l-2 border-border pl-3">
-                  <span className="text-sm font-semibold text-foreground">{f.name}</span>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {f.tech.map((t) => (
-                      <Badge key={t} variant="secondary" className="text-[11px] h-5 px-1.5 font-medium">
-                        {t}
-                      </Badge>
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {tags && tags.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <h4 className="text-sm font-semibold">Built with</h4>
-            <div className="flex flex-wrap gap-1">
-              {tags.map((tag) => (
-                <Badge key={tag} className="text-[11px] font-medium border border-border h-6 w-fit px-2" variant="outline">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </dialog>
-  );
-}
-
 export function ProjectCard({
   title,
   href,
@@ -222,7 +127,7 @@ export function ProjectCard({
   links,
   className,
 }: Props) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const detailHref = `/projects/${projectSlug(title)}`;
   const hasShots = !!screenshots && screenshots.length > 0;
 
   return (
@@ -233,12 +138,16 @@ export function ProjectCard({
       )}
     >
       <div className="relative shrink-0">
-        <Media shots={screenshots} icon={hasShots ? undefined : icon} title={title} />
+        <Link href={detailHref} aria-label={`${title} details`} className="block">
+          <Media shots={screenshots} icon={hasShots ? undefined : icon} title={title} />
+        </Link>
         {links && links.length > 0 && <LinkBadges links={links} className="absolute top-2 right-2 z-20" />}
       </div>
       <div className="p-6 flex flex-col gap-3 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <TitleBlock title={title} dates={dates} icon={icon} />
+          <Link href={detailHref} className="min-w-0 hover:opacity-80 transition-opacity">
+            <TitleBlock title={title} dates={dates} icon={icon} />
+          </Link>
           {href && (
             <Link
               href={href}
@@ -265,28 +174,14 @@ export function ProjectCard({
               ))}
             </div>
           )}
-          <button
-            type="button"
-            onClick={() => dialogRef.current?.showModal()}
-            className="w-full rounded-lg border border-border py-2 text-xs font-semibold hover:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <Link
+            href={detailHref}
+            className="w-full rounded-lg border border-border py-2 text-center text-xs font-semibold hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             More{features && features.length > 0 ? ` · ${features.length} features` : ""}
-          </button>
+          </Link>
         </div>
       </div>
-      <DetailsDialog
-        dialogRef={dialogRef}
-        title={title}
-        dates={dates}
-        icon={icon}
-        role={role}
-        stats={stats}
-        description={description}
-        screenshots={screenshots}
-        features={features}
-        tags={tags}
-        links={links}
-      />
     </div>
   );
 }

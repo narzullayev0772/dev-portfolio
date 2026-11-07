@@ -60,6 +60,12 @@ export const DATA = {
         icon: Icons.telegram,
         navbar: true,
       },
+      LeetCode: {
+        name: "LeetCode",
+        url: "https://leetcode.com/u/narzullayev0772/",
+        icon: Icons.leetcode,
+        navbar: true,
+      },
       email: {
         name: "Send Email",
         url: "mailto:alishernarzullayev7777@gmail.com",
@@ -165,7 +171,7 @@ export const DATA = {
         { name: "Voice messages", description: "Ogg/Opus playback through an FFI audio engine with crash-free teardown.", tech: ["flutter_soloud", "FFI"] },
         { name: "Tablet layout and edge-to-edge", description: "A navigation rail above the root navigator, and a reusable Android edge-to-edge inset toolkit.", tech: ["go_router", "Adaptive layout"] },
         { name: "Performance and memory", description: "Found a platform-view MethodChannel leak keeping screens alive via heap snapshots; skeleton loaders app-wide.", tech: ["DevTools", "VM service"] },
-        { name: "Jank tracer CLI", description: "A profile-mode tool that turns every slow frame into a path of the app's own widgets (A › B › C with file:line), the dominant phase and the raster suspects, by pairing UI and raster frames on the VM timeline. Pinpoints jank on low-end devices that DevTools made slow to trace.", tech: ["VM service", "Timeline", "Dart CLI"] },
+        { name: "Jank tracer and replay benchmark", description: "A profile-mode tool that turns every slow frame into a path of the app's own widgets with file:line, plus a record-and-replay benchmark: taps and flings are recorded against semantic anchors and replayed N times for a median before/after diff with a noise band. It proved list fixes (UI p99 −30–45%) and rejected one that made raster worse.", tech: ["VM service", "Timeline", "Service extensions", "Dart CLI"] },
         { name: "Session replay behind a kill switch", description: "Microsoft Clarity session replay and heatmaps, fully gated by Remote Config: both the on/off flag and the project ID come from config, so when disabled the SDK widget never mounts. Screen names and user IDs flow from the router, after the SDK is ready.", tech: ["Microsoft Clarity", "Firebase Remote Config", "go_router"] },
         { name: "Release automation", description: "Scripts that ship to TestFlight, Play and a team channel; an AI-assisted task → spec → tests pipeline.", tech: ["App Store Connect API", "Play API", "Bash"] },
       ],

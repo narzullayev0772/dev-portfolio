@@ -1,0 +1,57 @@
+---
+title: Halving raster time on screen entry without dropping the glass tab bar
+publishedAt: "2026-11-20"
+summary: On a low-end Android phone every push stuttered at ~30 fps; the cause was a backdrop blur redrawn each frame under the sliding page, and a snapshot taken only during the transition fixed it.
+---
+
+**Project:** 189 (exam-prep app, Flutter mobile)
+
+## Context
+
+Opening any screen felt janky on Android. The emulator showed a clean UI thread, so the first guesses (JSON parsing, `initState` requests) pointed nowhere. On a real Galaxy A40 (Mali-G71, no Vulkan, so Impeller runs on OpenGL ES) the picture was different: raster time was ~27 ms per frame for the whole slide, almost every frame over the 16.7 ms budget.
+
+## What I did
+
+- **Measured without the profiler's own overhead.** A widget-level tracer with build profiling inflated UI numbers 2–3×. I switched to reading the engine timeline directly (`Animator::BeginFrame` for UI, `Rasterizer::DoDraw` for raster) over the VM service.
+- **Drove the real phone reproducibly.** Screens were reached through their semantics labels (`uiautomator dump`), so the same path ran on every build; the local backend was seeded with hundreds of users, chats and results so lists were realistic.
+- **A/B builds with `--dart-define` flags.** Blur off: raster p50 27 → 19 ms. The glass tab bar's `BackdropFilter` was the main cost: Impeller has no raster cache, so the page under the incoming route, and its blur, is redrawn every frame while it slides.
+- **Kept the design, removed the cost.** While a route animates over the shell, the shell is painted from a single image (`SnapshotWidget`), live again when the transition ends. Raster p50 dropped to 14 ms, better than removing the blur.
+- **Rejected the generalisation.** Snapshotting every covered page looked like a free win; measured on device it made the total worse: taking the image costs more than redrawing a page without a blur. It stays on the shell only.
+- **UI-thread clean-up on the way.** `ModalRoute.of` makes widgets depend on every route change (`isCurrent` flips on each push); aspect lookups (`canPopOf`, `isCurrentOf`) stopped app bars from rebuilding on navigation. Fetches emit loading → result → idle; a `drawsLike` check in `buildWhen` skips the two that change nothing on screen. Heavy content that arrives mid-slide waits for the route to settle.
+
+## Key code
+
+```dart
+class _CoveredSnapshotState extends State<CoveredSnapshot> {
+  final _controller = SnapshotController();
+  Animation<double>? _covering;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final covering = ModalRoute.of(context)?.secondaryAnimation;
+    if (covering == _covering) return;
+    _covering?.removeStatusListener(_onStatus);
+    _covering = covering?..addStatusListener(_onStatus);
+    _onStatus(covering?.status ?? AnimationStatus.dismissed);
+  }
+
+  // Back-swipe drags report `forward`, so they are covered too.
+  void _onStatus(AnimationStatus s) => _controller.allowSnapshotting = s.isAnimating;
+
+  @override
+  Widget build(BuildContext context) =>
+      SnapshotWidget(controller: _controller, mode: SnapshotMode.permissive, child: widget.child);
+}
+```
+
+## Result
+
+- Raster p50 during a push over the shell: **27 → 14 ms** (Galaxy A40), glass tab bar unchanged.
+- First-frame UI time of several screens roughly halved (e.g. 170 → 72 ms, 206 → 106 ms).
+
+## What I learned
+
+- Emulator raster numbers say little about a GLES phone; measure on the weakest real device you support.
+- Measure with the cheapest instrument that answers the question; build profiling changes what it measures.
+- A fix that wins in one place can lose everywhere else: generalising the snapshot was the obvious next step and the data rejected it.

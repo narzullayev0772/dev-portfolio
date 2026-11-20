@@ -403,7 +403,9 @@ export const DATA = {
       description: "Exam-prep and contest platform for university applicants: Flutter app, Next.js admin, NestJS API. In closed beta.",
       technologies: ["Flutter", "NestJS", "Prisma", "PostgreSQL", "Next.js", "Socket.IO"],
       links: [],
-      features: [],
+      features: [
+        { name: "Screen-entry jank on a low-end Android", description: "Traced stutter on every navigation to a glass tab bar re-blurring each frame under the sliding page on Impeller's OpenGL ES backend; snapshotting the covered shell only while a route animates halved the slide's raster time (p50 27 → 14 ms) without dropping the glass. Also cut no-op rebuilds on push/pop and deferred heavy content until the slide settles.", tech: ["Impeller", "SnapshotWidget", "VM timeline", "BLoC"] },
+      ],
     },
   ],
   hackathons: [

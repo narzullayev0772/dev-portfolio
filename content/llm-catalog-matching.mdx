@@ -1,0 +1,79 @@
+---
+title: The LLM could read the order. It couldn't find the product.
+publishedAt: "2026-11-23"
+summary: Splitting "read the document" from "find the catalog item" took an AI order import from 0 to 24 correctly matched lines on a labelled benchmark.
+---
+
+**Project:** Uyqur (construction ERP, Flutter mobile + PHP backend)
+
+## Context
+
+Site managers write purchase requests on paper: "Concrete 350M — 20 m³", "rebar Ø18 — 2 t". The app already had an AI import:
+upload a photo, get order lines. It read the photo fine. Project, warehouse, supplier and quantities came back right.
+But the product, the one field that matters, came back empty on every line I tested.
+
+The catalog is the hard part, not the photo:
+
+- **Near-duplicates.** One company had the same concrete grade entered five times under the same name.
+- **Attributes decide identity.** "Concrete M350" and "Concrete M300" share every word except the one that matters.
+- **Two scripts, many forms.** Cyrillic and Latin spellings, abbreviations, plural/singular word forms, `3,0 mm` vs `3`.
+
+A model that sees thousands of catalog names in its prompt can't reliably pick between ten nearly identical ones.
+
+## What I did
+
+I treated it as an entity-resolution problem in three stages, and kept the logic where it can outlive the codebase around it.
+
+1. **Extract (LLM, structured output).** The model never sees the catalog. It returns, per line, the verbatim text,
+   a search phrase in the original and the other language, and separate fields for grade, class and every distinguishing number.
+   The JSON schema is enforced by the API, so there is nothing to parse.
+2. **Retrieve (SQL).** A stored procedure returns the top 15 candidates per line. It normalizes both sides the same way
+   (transliteration, splitting `m350` into `m 350`, `3.0` → `3`), runs boolean full-text search with a crude prefix stem
+   (`plitka trotuarnaya` → `plit* trotuar*`), adds points for matching numbers and grade, subtracts points for a
+   *conflicting* grade, and collapses duplicate names to one representative.
+3. **Rerank (LLM, constrained).** A second call sees only those candidates and returns one of their IDs or `null`,
+   plus `exact | suggested | not_found`. An ID outside the list is discarded, so the model can't invent a product.
+
+A user's manual correction is stored as an alias and short-circuits the next lookup.
+
+**Rejected:** putting the whole catalog in the prompt (that is what failed), and doing matching logic in application code.
+The backend was going to be rewritten in another language, so all scoring lives in SQL functions and the prompts live in
+plain files. The application layer is about 60 lines: call a procedure, call the model, call a procedure, call the model.
+
+## Key code
+
+The scoring is just arithmetic over signals, which makes it easy to read and tune:
+
+```sql
+SELECT product_id,
+       COALESCE(ft / NULLIF(MAX(ft) OVER (), 0), 0) * 5      -- relative text match
+     + num_hits * 1.5 - (n_total - num_hits) * 0.5            -- numbers present / missing
+     + CASE WHEN q_grade IS NULL OR grade IS NULL THEN 0
+            WHEN grade = q_grade THEN 3 ELSE -3 END           -- M350 never "matches" M300
+     + LN(1 + usage_count) * 0.3                              -- tie-break: what people actually order
+       AS score
+FROM candidates
+ORDER BY score DESC
+LIMIT 15;
+```
+
+## Result
+
+I built a small lab that sends the same file to the existing endpoint and to the new pipeline and shows both side by side,
+plus a benchmark of three synthetic handwritten requests with hand-labelled answers.
+
+- Existing flow: **0/24** lines matched to a product.
+- New pipeline: **24/24**, with the first version at 18/24. The last six came from two SQL fixes found by the benchmark:
+  word-form stemming and number normalization.
+- Trade-off: ~30 s per document versus ~4 s, because of two model calls. That is the next thing to optimize.
+
+The write-up became the spec for the backend team, including the SQL, prompts and a hand-off file another Claude
+session can implement from.
+
+## What I learned
+
+- Let the LLM do what it is good at (reading messy input, choosing among a few options) and keep search deterministic.
+- Constrain the model's output to IDs you supplied. It removes a whole class of hallucination.
+- A tiny labelled benchmark beats intuition: two of my "obvious" fixes did nothing, two unglamorous ones closed the gap.
+- Be honest about the benchmark. Synthetic documents are cleaner than real photos, and I widened the answer key
+  after the first run where the model picked a genuinely equivalent product. Real-world accuracy has to be measured in production.

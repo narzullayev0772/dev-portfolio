@@ -1,0 +1,95 @@
+---
+title: Spoken push notifications in the user's language, even when the app is closed
+publishedAt: "2026-11-28"
+summary: Each push type plays a short spoken prompt in the user's language. The key insight is that the OS, not the app, picks the sound, so language has to live in the sound key itself.
+---
+
+**Project:** Uyqur (construction ERP, Flutter mobile)
+
+## Context
+
+Some notifications need attention without the user having to read the screen, for example a document waiting for a signature. The idea was that a push should not just make the usual beep: it should *say* what happened, briefly, in the user's own language. The app supports six languages, and there are several event types.
+
+It sounds like a playback feature, but the hard part is that the app usually isn't running when the push arrives.
+
+## What I did
+
+**1. Accept that the OS chooses the sound.** When the app is in the background or closed, no Dart code runs before the notification is shown. The system takes the sound from the payload itself:
+
+- **iOS:** the `sound` field in the APNs payload names a file bundled with the app.
+- **Android 8+:** the sound belongs to the *notification channel*, and the payload only names the channel.
+
+So "pick the sound for the user's language at runtime" is impossible in exactly the case that matters. The language has to be decided by whoever builds the payload.
+
+**2. Put the language in the key.** Every sound gets a key of the form `<event>_<lang>`. The same key is the iOS file name and the Android channel id. The server already knows the user's language, so it simply sends `event_ru` instead of `event`. The language is not sent as a separate field for the app to interpret, because the app never gets the chance to.
+
+**3. One channel per event and language, grouped by language.** On Android this means one channel per event per language. To keep system settings readable, channels are put into one *channel group* per language, and channel names are localized. When the user switches the app language, the app re-syncs: it creates the channels for the new language with localized names.
+
+**4. Treat channels as immutable.** An Android channel's sound cannot be changed after it is created, and only the user can change it after that. Two consequences:
+
+- Replacing a sound file's *content* under the same name works, because the channel stores a resource URI, not the bytes.
+- Renaming a file, or changing which file a key points to, needs a *new channel id*, in other words versioning.
+
+On startup the app also deletes legacy channels that are no longer in the catalog, so users don't end up with dead entries in their settings.
+
+**5. Never create a channel without a file.** A channel is created only for languages that actually ship a sound file. Otherwise the channel would be created with the default sound and then stay that way forever.
+
+**6. Coordinate the rollout with the server.** Old app versions don't have the channels, and a push that names a missing channel is shown silently or with the default sound, depending on the OS. So the server sends channel ids behind a flag that is switched on only after the app version with the channels is widely installed.
+
+**Rejected alternatives:**
+
+- *A data-only push with local playback.* The app would play the sound itself. This doesn't work when the app is killed (iOS gives no reliable wake-up) and causes double sounds in the foreground.
+- *A single channel with a runtime sound.* Not possible on Android 8+.
+
+## Key code
+
+A catalog that is the single source of truth for keys, plus channel sync. This is simplified and generic:
+
+```dart
+class PushSound {
+  const PushSound(this.event, this.lang);
+  final String event;
+  final String lang;
+
+  /// Same string everywhere: iOS file name, Android channel id, payload value.
+  String get key => '${event}_$lang';
+
+  static const events = ['approval_needed', 'document_ready' /* … */];
+  static const langsWithFiles = ['uz', 'ru', 'en' /* only languages with files */];
+}
+
+Future<void> syncChannels(String lang) async {
+  final android = plugin.resolvePlatformSpecificImplementation<
+      AndroidFlutterLocalNotificationsPlugin>();
+  if (!PushSound.langsWithFiles.contains(lang)) return; // keep the default sound
+
+  await android?.createNotificationChannelGroup(
+      AndroidNotificationChannelGroup('sounds_$lang', localizedGroupName(lang)));
+  for (final event in PushSound.events) {
+    final s = PushSound(event, lang);
+    await android?.createNotificationChannel(AndroidNotificationChannel(
+      s.key, localizedChannelName(event),
+      groupId: 'sounds_$lang',
+      importance: Importance.high,
+      sound: RawResourceAndroidNotificationSound(s.key), // res/raw/<key>
+    ));
+  }
+  // Remove legacy channels that are no longer in the catalog.
+  for (final c in await android?.getNotificationChannels() ?? []) {
+    if (isOurs(c.id) && !isInCatalog(c.id)) await android?.deleteNotificationChannel(c.id);
+  }
+}
+```
+
+The sound files are short mono WAV clips, about 2 seconds each. They live in Android `res/raw` and in the iOS bundle. On iOS they also have to be added to the Xcode project, otherwise APNs can't find them.
+
+## Result
+
+- 54 spoken prompts (9 event types × 6 languages) that play in the user's language in the foreground, in the background and when the app is killed, on both platforms.
+- A test script sends real FCM pushes per event and platform, so a sound can be checked on a device without waiting for the real event to happen.
+
+## What I learned
+
+- Design push features for the **killed** state first. Anything that relies on app code running at delivery time breaks there.
+- On Android, a notification channel is closer to a **contract** than a setting: once created, its sound belongs to the user. Put a version in the channel id from day one.
+- When the client can't decide at delivery time, move the decision into the **key** the server sends, and keep one catalog that both sides agree on.

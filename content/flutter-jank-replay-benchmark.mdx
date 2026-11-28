@@ -1,0 +1,66 @@
+---
+title: Proving Flutter jank fixes with a record-and-replay benchmark
+publishedAt: "2026-11-06"
+summary: I recorded real taps and flings, replayed them on an emulator in profile mode five times per build, and compared medians against a baseline. The fixes cut UI p99 frame time by 30–45% across two measurement sessions, and the same harness caught a "fix" that made the raster thread worse.
+---
+
+**Project:** Uyqur (construction ERP, Flutter mobile)
+
+## Context
+
+My [jank tracer](/blog/flutter-jank-tracer) told me *where* slow frames came from, but not whether a change actually helped. Manual before/after testing doesn't work for this: each run scrolls a little differently, data loads at different times, and on an emulator the jank count alone moves ±20–40% between identical runs. I wanted a loop of find jank → fix → replay the exact same interaction → get a number I can trust.
+
+## What I did
+
+**Recording without coordinates.** A dev-only recorder hooks the global pointer route. On every pointer-down it hit-tests the position and walks the element tree to find the owner of the deepest hit `RenderObject`, because `debugCreator` doesn't exist in profile mode. From that owner it picks an anchor in this order:
+1. a `ValueKey<String>` near the tap;
+2. a `Semantics` label;
+3. short text with letters and no digits (amounts and dates change between runs);
+4. the widget type, as a last resort.
+
+On replay it waits for the anchor to become visible *and* hit-testable, then taps at the same offset from its centre. If several widgets match, it picks the one closest to the recorded position. Two traps I hit while testing it: framework keys (`_ScaffoldSlot.appBar`) were being chosen as anchors, and so were icon-font glyphs such as `''`.
+
+**Same screen, same physics.** Every step also stores the router location. If replay is on a different screen than expected, it stops with an error instead of quietly measuring the wrong thing. Flings are replayed with their *recorded* timestamps, so the velocity tracker produces the same fling every run.
+
+**Profile mode without `evaluate`.** AOT builds can't evaluate expressions, so the CLI drives the app through `registerExtension` service extensions (`recordStart`, `recordStop`, `replay`). Each step emits a `Timeline.instantSync` marker, which lets frames be grouped per step. The recorder is gated behind `bool.fromEnvironment('PERF_RECORDER') && !kReleaseMode`. Because that is a compile-time constant, release builds tree-shake the whole recorder away.
+
+**Statistics that admit noise.** The CLI runs one warm-up pass, which absorbs shader and glyph first-use costs and is discarded, and then N measured passes. For each step it takes the median of jank count and UI/raster p90/p99. A difference is flagged only when it beats both a relative and an absolute threshold, and every report prints the min–max spread across runs.
+
+**Coverage.** The same recorder logs route *patterns* as the user explores. At the end it diffs them against every `GoRoute` in the config, so untested screens show up as a list.
+
+## Fixes it validated
+
+- **`Theme(data: ThemeData(...))` inside a shared button's build.** The full Material theme was rebuilt per button, only to set an icon colour. Replaced it with `IconTheme`.
+- **Swipe-to-reveal rows.** Every closed row built and laid out its hidden action buttons and ran a `TextPainter` measurement on each build. Now the buttons are built only while the row is revealed, and the child keeps its state through a `ValueKey`.
+- **`SliverToBoxAdapter(ListView(shrinkWrap: true))`.** Every loaded item was laid out in one frame. Replaced it with a lazy `SliverList.separated`.
+- **A long user list inside an `IntrinsicHeight` row.** Intrinsic passes are not timeline layout events, so the time showed up as a huge `RenderFlex` self time (≈2 s on one frame). The list was collapsed to "first + N".
+- **Rejected:** wrapping the glass surfaces in a `BackdropGroup` with `BackdropFilter.grouped`. With only one blur on screen, raster p99 went from 103 to 152 ms. I isolated it in a separate build, confirmed it was the cause and reverted it.
+
+## Key code
+
+```dart
+// Pick the match nearest to where the user actually tapped: after a scroll
+// the same label can appear twice and the n-th index shifts.
+final points = [for (final m in visibleMatches(anchor)) m.rect.center + anchor.delta];
+points.sort((a, b) => (a - recorded).distance.compareTo((b - recorded).distance));
+```
+
+```
+═══ list scenario — median of 5 runs (vs baseline) ═══
+total      jank 53→40 −25% ✅   UI p99 23.0→12.6 −45% ✅   raster p99 103→75.5 −27% ✅
+noise (total): jank 37–46, UI p90 2.8–3.5ms
+```
+
+## Result
+
+On a 7-step list scenario (5 runs per build, Android emulator), measured in two separate sessions against the same baseline:
+- UI p99: 23.0 → 12.6 ms and 23.0 → 16.0 ms (−45% and −30%);
+- raster p99: 103 → 75.5 ms and 103 → 50.6 ms.
+
+The jank count stayed inside the noise band in the second session (50–85 vs. a 38–63 baseline), so I don't claim it. That session also showed something I hadn't expected: a Next.js build running on the same host made every metric worse. Benchmarks now run on an idle machine. The check runs at the end of every UI task.
+
+## What I learned
+
+- On an emulator, trust UI-thread percentiles. Raster numbers and raw jank counts are too noisy for a verdict, so judge those on a real device. Host load matters too: an emulator benchmark next to a running build is meaningless.
+- An optimisation is a hypothesis until it's measured. The fix I was most confident about, grouping backdrops, was the one that regressed.
+- Recording intent (anchor + route) instead of coordinates is what makes a replay survive layout changes and slow network responses.
